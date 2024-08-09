@@ -32,7 +32,6 @@ namespace toadll::mappings
 			// WORLD
 			methods[mapping::isAirBlock] = { "isAirBlock", "(Lnet/minecraft/util/BlockPos;)Z" };
 			methods[mapping::rayTraceBlocks] = { "rayTraceBlocks", "(Lnet/minecraft/util/Vec3;Lnet/minecraft/util/Vec3;Z)Lnet/minecraft/util/MovingObjectPosition;" };
-			methods[mapping::getBlockFromBlockState] = { "getBlock", "()Lnet/minecraft/block/Block;" };
 			methods[mapping::getIdFromBlockStatic] = { "getIdFromBlock", "(Lnet/minecraft/block/Block;)I" };
 
 			fields[mappingFields::playerEntitiesField] = { "playerEntities", "Ljava/util/List;" };
@@ -64,6 +63,7 @@ namespace toadll::mappings
 
 			methods[mapping::getPos] = {"getPositionVector", "()Lnet/minecraft/util/Vec3;"};
 			methods[mapping::getBlockPosition] = {"getPosition", "()Lnet/minecraft/util/BlockPos;" };
+			methods[mapping::getBlockPositionFromMovingBlock] = { "getBlockPos", "()Lnet/minecraft/util/BlockPos;" };
 			methods[mapping::isSneaking] = {"isSneaking", "()Z" };
 
 			methods[mapping::getBlockPos] = { "getBlockPos", "()Lnet/minecraft/util/BlockPos;" };
@@ -172,7 +172,7 @@ namespace toadll::mappings
 			fields[mappingFields::playerEntitiesField] = { "playerEntities", "Ljava/util/List;" };
 
 			// .Block
-			methods[mapping::getBlockFromBlockState] = { "getBlock", "()Lnet/minecraft/block/Block;" };
+			//methods[mapping::getBlockFromBlockState] = { "getBlock", "()Lnet/minecraft/block/Block;" };
 			methods[mapping::getIdFromBlockStatic] = { "getIdFromBlock", "(Lnet/minecraft/block/Block;)I" };
 
 			// .GameSettings
@@ -205,6 +205,7 @@ namespace toadll::mappings
 
 			methods[mapping::getPos] = { "getPosition", "(F)Lnet/minecraft/util/Vec3;" };
 			methods[mapping::getBlockPosition] = { "getPosition", "()Lnet/minecraft/util/BlockPos;" };
+			methods[mapping::getBlockPositionFromMovingBlock] = { "getBlockPos", "()Lnet/minecraft/util/BlockPos;" };
 			methods[mapping::isSneaking] = { "isSneaking", "()Z" };
 
 			fields[mappingFields::inventoryField] = { "inventory", "Lnet/minecraft/entity/player/InventoryPlayer;" };
