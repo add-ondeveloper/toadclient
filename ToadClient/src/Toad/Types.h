@@ -350,6 +350,8 @@ enum class mappingFields
 	Vec3X,
 	Vec3Y,
 	Vec3Z,
+
+    COUNT,
 };
 
 enum class mapping
@@ -366,14 +368,10 @@ enum class mapping
     rayTraceBlocks, // args: (jobject Vec3 from, jobject Vec3 direction, bool stopOnLiquid) returns: jobject MovingObjectPosition if block hit else null
 
     // .Block
-    getBlockFromBlockState,
     getIdFromBlockStatic,
 
     // .BlockState
     getBlock,
-
-    // player
-    getOpenContainer,
 
     // .GameSettings
     //setGamma,
@@ -384,7 +382,6 @@ enum class mapping
     //getRotationPitch,
 
     getBlockPosition,
-    getBlockPos,
     getBlockPositionFromMovingBlock,
     isSneaking, // ()Z
 
@@ -407,17 +404,12 @@ enum class mapping
     getStackInSlot, // (I)Lnet/minecraft/item/ItemStack;
     getItem, // ()Lnet/minecraft/item/Item;
 
-    // .EntityRenderer
-    disableLightmap,
-    enableLightmap,
-
     // .EntityLivingBase
     getHeldItem,
     //getHurtTime,
     getHealth,
 
     // .ActiveRenderInfo
-    getRenderPos,
 
     // .Vec3
     Vec3Init, // args: double x, double y, double z 
@@ -438,6 +430,8 @@ enum class mapping
 
     // Timer
     partialTick,
+
+    COUNT,
 };
 
 constexpr static auto g_PI = 3.14159265358979323846f;

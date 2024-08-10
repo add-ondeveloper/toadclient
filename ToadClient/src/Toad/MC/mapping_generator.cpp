@@ -104,38 +104,38 @@ void MappingGenerator::Generate(JNIEnv* env, jvmtiEnv* jvmti_env)
 		return;
 	}
 
-	jclass mc_class = Minecraft::getMcClass(env);
-	jclass player_class = findclass(mappings::fields[mappingFields::thePlayerField].sig.c_str(), env);
-	jclass world_client_class = findclass("net.minecraft.client.multiplayer.WorldClient", env);
-	jclass world_class = findclass("net.minecraft.world.World", env);
-	jclass block_pos_class = findclass("net.minecraft.util.MovingObjectPosition", env);
-	int mc_class_index = -1;
-	int world_class_index = -1;
-	int world_client_class_index = -1;
-	int player_class_index = -1;
-	int block_pos_class_index = -1;
-	Mappings mc_mappings = GetMappingsForClass(env, jvmti_env, mc_class, mc_class_index);
-	Mappings world_client_mappings = GetMappingsForClass(env, jvmti_env, world_client_class, world_client_class_index);
-	Mappings world_mappings = GetMappingsForClass(env, jvmti_env, world_class, world_class_index);
-	Mappings player_mappings = GetMappingsForClass(env, jvmti_env, player_class, player_class_index);
-	Mappings block_pos_mappings = GetMappingsForClass(env, jvmti_env, block_pos_class, block_pos_class_index);
-	env->DeleteLocalRef(world_client_class);
-	env->DeleteLocalRef(mc_class);
-	env->DeleteLocalRef(player_class);
-	env->DeleteLocalRef(world_class);
-	env->DeleteLocalRef(block_pos_class);
+	const auto serialize_klass = [&env, &jvmti_env](json& data, std::string_view klass_name, std::string_view json_name)
+		{
+			// get info 
+			jclass klass = findclass(klass_name.data(), env);
+			int index = -1;
+			Mappings mappings = GetMappingsForClass(env, jvmti_env, klass, index);
+			env->DeleteLocalRef(klass);
+
+			// store in json 
+			data[json_name]["mappings"] = mappings.Serialize();
+			data[json_name]["class_index"] = index;
+		};
 
 	json data;
-	data["mc"]["mappings"] = mc_mappings.Serialize();
-	data["mc"]["class_index"] = mc_class_index; 
-	data["worldclient"]["mappings"] = world_client_mappings.Serialize();
-	data["worldclient"]["class_index"] = world_client_class_index;
-	data["world"]["mappings"] = world_mappings.Serialize();
-	data["world"]["class_index"] = world_class_index;
-	data["player"]["mappings"] = player_mappings.Serialize();
-	data["player"]["class_index"] = player_class_index;
-	data["blockpos"]["mappings"] = block_pos_mappings.Serialize();
-	data["blockpos"]["class_index"] = block_pos_class_index;
+	serialize_klass(data, "net.minecraft.client.Minecraft", "mc");
+	serialize_klass(data, "net.minecraft.client.entity.EntityPlayerSP", "player");
+	serialize_klass(data, "net.minecraft.util.MovingObjectPosition", "mop");
+	serialize_klass(data, "net.minecraft.world.World", "world");
+	serialize_klass(data, "net.minecraft.entity.EntityLivingBase", "elb");
+	serialize_klass(data, "net.minecraft.entity.Entity", "entity");
+	serialize_klass(data, "net.minecraft.client.renderer.ActiveRenderInfo", "ari");
+	serialize_klass(data, "net.minecraft.util.Vec3i", "vec3i");
+	serialize_klass(data, "net.minecraft.util.Vec3", "vec3");
+	serialize_klass(data, "net.minecraft.util.BlockPos", "blockpos");
+	serialize_klass(data, "net.minecraft.entity.player.EntityPlayer", "entityplayer");
+	serialize_klass(data, "net.minecraft.util.Timer", "timer");
+	serialize_klass(data, "net.minecraft.client.gui.inventory.GuiChest", "guichest");
+	serialize_klass(data, "net.minecraft.item.ItemStack", "itemstack");
+	serialize_klass(data, "net.minecraft.block.Block", "block");
+	serialize_klass(data, "net.minecraft.block.state.BlockState", "blockstate");
+	serialize_klass(data, "net.minecraft.inventory.IInventory", "iinventory");
+
 	std::ofstream file(std::filesystem::path(documents) / "mapping_gen_out.txt");
 	if (!file)
 	{
@@ -246,19 +246,27 @@ void MappingGenerator::InitMappings(JNIEnv* env, jvmtiEnv* jvmti_env, const std:
 		return;
 	}
 
+	const auto init_for_data = [&env, &jvmti_env, &data](std::string_view json_key)
+		{
+			json klass_data;
+			config::get_json_element(klass_data, data, json_key);
+			Mappings klass_mappings = Mappings::Deserialize(klass_data["mappings"]);
+			std::string klass_name = FindClassTypes(env, jvmti_env, klass_mappings);
+			jclass klass = findclass(klass_name.c_str(), env);
+			InitMappingsForClass(env, jvmti_env, klass, klass_mappings);
+			env->DeleteLocalRef(klass);
+		};
+
+	//std::vector<Mappings> klass_mappings;
+	//klass_mappings.emplace_back()
+
+	//FindClassTypes(env, jvmti_env, klass_mappings);
+	//InitMappingsForClass(env, jvmti_env, klasses, klass_mappings);
+
 	json mc_data;
-	json player_data;
-	json world_data;
-	json world_client_data;
-	json block_pos_data;
 	config::get_json_element(mc_data, data, "mc");
-	config::get_json_element(world_client_data, data, "worldclient");
-	config::get_json_element(world_data, data, "world");
-	config::get_json_element(player_data, data, "player");
-	config::get_json_element(block_pos_data, data, "blockpos");
 
 	Mappings mc_mappings = Mappings::Deserialize(mc_data["mappings"]);
-	Mappings player_mappings = Mappings::Deserialize(player_data["mappings"]);
 
 	// #TODO: optimize later 
 
@@ -267,151 +275,76 @@ void MappingGenerator::InitMappings(JNIEnv* env, jvmtiEnv* jvmti_env, const std:
 	//min_methods_count.push(0);
 
 	std::string mc_class_name = FindClassTypes(env, jvmti_env, mc_mappings);
-	Minecraft::unsupported_mc_class_name = mc_class_name;
 	jclass minecraft = findclass(mc_class_name.c_str(), env);
+	InitMappingsForClass(env, jvmti_env, minecraft, mc_mappings);
+	Minecraft::unsupported_mc_class_name = mc_class_name;
+	env->DeleteLocalRef(minecraft);
 
-	jint mc_class_methods_count;
-	jmethodID* methods = nullptr;
-	jvmtiError err = jvmti_env->GetClassMethods(minecraft, &mc_class_methods_count, &methods);
+	//jint method_count;
+	//jmethodID* methodids;
+	//jvmti_env->GetClassMethods(world, &method_count, &methodids);
+	//for (int i = 0; i < method_count; i++)
+	//{
+	//	jint bytecodes_count = 0;
+	//	unsigned char* b;
 
-	// save score of mapped methods (so we can check later for better ones)
-	std::unordered_map<mapping, int> mapping_methods_scored;
-	std::unordered_map<mappingFields, int> mapping_fields_scored;
+	//	jvmti_env->GetBytecodes(methodids[i], &bytecodes_count, &b);
+	//	std::string bcodes;
+	//	for (int j = 0; j < bytecodes_count; j++)
+	//	{
+	//		bcodes += std::to_string(b[j]) + ' ';
+	//	}
+	//	LOGDEBUG("{} {}", i, bcodes);
+	//}
 
-	if (err == JVMTI_ERROR_NONE)
-	{
-		// match methods with minecraft methods
+	init_for_data("player");
+	init_for_data("mop");
+	init_for_data("world");
+	init_for_data("elb");
+	init_for_data("entity");
+	init_for_data("ari");
+	init_for_data("vec3i");
+	init_for_data("vec3");
+	init_for_data("blockpos");
+	init_for_data("entityplayer");
+	init_for_data("timer");
+	init_for_data("guichest");
+	init_for_data("itemstack");
+	init_for_data("block");
+	init_for_data("blockstate");
+	init_for_data("iinventory");
 
-		for (int i = 0; i < mc_class_methods_count; i++)
-		{
-			jmethodID method = methods[i];	
-			char* name;
-			char* sig;
-			char* generic;
-			err = jvmti_env->GetMethodName(method, &name, &sig, &generic);
-			if (err != JVMTI_ERROR_NONE)
-				continue;
+	std::set<int> mappings_methods_initialized{};
+	std::set<int> mappings_fields_initialized{};
 
-			uint8_t* bytecodes;
-			jint bytecode_count = 0;
-			err = jvmti_env->GetBytecodes(method, &bytecode_count, &bytecodes);
-			if (err != JVMTI_ERROR_NONE)
-				continue;
-
-			std::vector<uint8_t> current_bytecodes(bytecodes, bytecodes + bytecode_count);
-			mapping max;
-			max = mapping::NONE;
-			float max_score = 0;
-
-			for (const MethodMapping& m : mc_mappings.methods)
-			{
-				if (m.method == mapping::NONE)
-					continue;
-
-				float similarity = math::jaccard_index(m.bytecodes, current_bytecodes);
-				if (similarity > max_score)
-				{
-					max_score = similarity;
-					max = m.method;
-				}
-			}
-
-			if (max != mapping::NONE)
-			{
-				auto it = mapping_methods_scored.find(max);
-				if (it != mapping_methods_scored.end())
-				{
-					if (max_score < it->second)
-					{
-						mappings::methods[max] = { name, sig };
-						it->second = max_score;
-					}
-				}
-				else
-				{
-					mappings::methods[max] = { name, sig };
-					mapping_methods_scored.emplace(max, max_score);
-				}
-			}
-		}
-		
-	}
-
-	jint mc_class_fields_count;
-	jfieldID* fields = nullptr;
-	err = jvmti_env->GetClassFields(minecraft, &mc_class_fields_count, &fields);
-
-	if (err == JVMTI_ERROR_NONE)
-	{
-		for (int i = 0; i < mc_class_fields_count; i++)
-		{
-			jfieldID field = fields[i];
-			char* name;
-			char* sig;
-			char* generic;
-			jint modifiers = -1;
-			err = jvmti_env->GetFieldName(minecraft, field, &name, &sig, &generic);
-			jvmti_env->GetFieldModifiers(minecraft, field, &modifiers);
-			if (err != JVMTI_ERROR_NONE)
-				continue;
-
-			mappingFields max;
-			max = mappingFields::NONE;
-			// the lower the better the score 
-			int min_score = std::numeric_limits<int>::max();
-			
-			for (const MappingField& f : mc_mappings.fields)
-			{
-				if (f.field == mappingFields::NONE)
-					continue;
-
-				int score = 0;
-				score += abs(f.index - i);
-				if (f.modifiers != modifiers)
-					score += 1;
-
-				LOGDEBUG("matching {} {}, score: {}", f.name, name, score);
-
-				if (score < min_score)
-				{
-					min_score = score;
-					max = f.field;
-				}
-			}
-
-			if (max != mappingFields::NONE)
-			{
-				auto it = mapping_fields_scored.find(max);
-				if (it != mapping_fields_scored.end())
-				{
-					if (min_score < it->second)
-					{
-						mappings::fields[max] = { name, sig };
-						it->second = min_score;
-					}
-				}
-				else
-				{
-					mappings::fields[max] = { name, sig };
-					mapping_fields_scored.emplace(max, min_score);
-				}
-			}
-		}
-	}
-
-	if (methods)
-		jvmti_env->Deallocate((unsigned char*)methods);
-	if (fields)
-		jvmti_env->Deallocate((unsigned char*)fields);
-
-	for (auto& [mapping, map] : mappings::methods)
+	for (const auto& [mapping, map] : mappings::methods)
 	{
 		LOGDEBUG("{} ({}, {})", (int)mapping, map.name, map.sig);
+		mappings_methods_initialized.emplace((int)mapping);
 	}	
 	
-	for (auto& [mapping, map] : mappings::fields)
+	for (const auto& [mapping, map] : mappings::fields)
 	{
 		LOGDEBUG("{} ({}, {})", (int)mapping, map.name, map.sig);
+		mappings_fields_initialized.emplace((int)mapping);
+	}
+
+	// print missing 
+	LOGDEBUG("[MappingGenerator] Missing {} methods", (int)mapping::COUNT - mappings_methods_initialized.size() - 1);
+	LOGDEBUG("[MappingGenerator] Missing {} fields", (int)mappingFields::COUNT - mappings_fields_initialized.size() - 1);
+	for (int i = 1; i < (int)mappingFields::COUNT - 1; i++)
+	{
+		if (mappings_fields_initialized.contains(i))
+			continue;
+
+		LOGDEBUG("[MappingGenerator] Missing field for {}", i);
+	}	
+	for (int i = 1; i < (int)mapping::COUNT - 1; i++)
+	{
+		if (mappings_methods_initialized.contains(i))
+			continue;
+
+		LOGDEBUG("[MappingGenerator] Missing method for {}", i);
 	}
 }
 
@@ -435,8 +368,12 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 
 	std::vector<std::vector<uint8_t>> mapping_method_bytecodes;
 	mapping_method_bytecodes.reserve(mappings.methods.size());
-	for (const MethodMapping& method : mappings.methods)
+	for (MethodMapping method : mappings.methods)
+	{
+		method.bytecodes.emplace_back(method.modifiers);
+		method.bytecodes.emplace_back(method.index);
 		mapping_method_bytecodes.emplace_back(method.bytecodes);
+	}
 
 	LOGDEBUG("[MappingGenerator] Mapping bytecodes size: {}", mapping_method_bytecodes.size());
 
@@ -459,6 +396,7 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 		{
 			if (methods)
 				jvmti_env->Deallocate((unsigned char*)methods);
+
 			continue;
 		}
 
@@ -471,20 +409,40 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 			jint bytecode_count = 0;
 			err = jvmti_env->GetBytecodes(methods[j], &bytecode_count, &bytecodes);
 			if (err != JVMTI_ERROR_NONE)
+			{
+				// returns error 104 JVMTI_ERROR_NATIVE_METHOD sometimes
+				LOGWARN("[MappingGenerator] GetBytecodes returned error: {}", (int)err);
 				continue;
+			}
 
 			std::vector<uint8_t> current_bytecodes(bytecodes, bytecodes + bytecode_count);
 			std::set<int> ignore_method_bytecodes{};
 
+			jint mod = -1;
+			jvmti_env->GetMethodModifiers(methods[j], &mod);
+			current_bytecodes.emplace_back(mod);
+			current_bytecodes.emplace_back(j);
+			
 			// match 
 			for (int k = 0; k < mapping_method_bytecodes.size(); k++)
 			{
 				if (ignore_method_bytecodes.contains(k))
+					continue;				
+				if (mapping_method_bytecodes[k].empty() || current_bytecodes.empty())
 					continue;
 
 				float similarity = math::jaccard_index(current_bytecodes, mapping_method_bytecodes[k]);
 				if (similarity > 0.7f)
 				{
+					//std::string a;
+					//std::string b;
+
+					//for (auto c : current_bytecodes)
+					//	a += std::to_string(c) + ' ';
+					//for (auto c : mapping_method_bytecodes[k])
+					//	b += std::to_string(c) + ' ';
+
+					//LOGDEBUG("{} {} = {}", a, b, similarity);
 					similar_counter++;
 					similarity_score += similarity;
 					ignore_method_bytecodes.emplace(k);
@@ -519,7 +477,7 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 
 	jvmti_env->Deallocate((unsigned char*)classes);
 
-	LOGDEBUG("[MappingGenerator] Minecraft class possibilities: {}", possible_classes.size());
+	LOGDEBUG("[MappingGenerator] Class possibilities: {}", possible_classes.size());
 	float max_score = 0;
 	int index = -1;
 	for (int i = 0; i < possible_classes.size(); i++)
@@ -533,11 +491,20 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 	}
 
 	if (index != -1)
+	{
 		LOGDEBUG("[MappingGenerator] Found at {} with score {} name: {}", index, max_score, possible_classes[index].first);
+		return possible_classes[index].first;
+	}
 	else
-		LOGDEBUG("[MappingGenerator] Couldn't find minecraft class");
+	{
+		LOGDEBUG("[MappingGenerator] Couldn't find class");
+		return "";
+	}
+}
 
-	return possible_classes[index].first;
+float get_similarity(jclass klass, const Mappings& mapping)
+{
+	return 0;
 }
 
 Mappings MappingGenerator::GetMappingsForClass(JNIEnv* env, jvmtiEnv* jvmti_env, jclass klass, int& class_index)
@@ -677,6 +644,7 @@ Mappings MappingGenerator::GetMappingsForClass(JNIEnv* env, jvmtiEnv* jvmti_env,
 	jvmti_err = jvmti_env->GetLoadedClasses(&class_count, &classes);
 	if (jvmti_err != JVMTI_ERROR_NONE)
 	{
+		LOGDEBUG("[MappingGenerator] GetLoadedClasses returned error {}", (int)jvmti_err);
 		env->DeleteLocalRef(klass);
 		return klass_mappings;
 	}
@@ -695,6 +663,145 @@ Mappings MappingGenerator::GetMappingsForClass(JNIEnv* env, jvmtiEnv* jvmti_env,
 	jvmti_env->Deallocate((unsigned char*)classes);
 
 	return klass_mappings;
+}
+
+void MappingGenerator::InitMappingsForClass(JNIEnv* env, jvmtiEnv* jvmti_env, jclass klass, const Mappings& mappings)
+{
+	jint klass_methods_count;
+	jmethodID* methods = nullptr;
+	jvmtiError err = jvmti_env->GetClassMethods(klass, &klass_methods_count, &methods);
+
+	// save score of mapped methods (so we can check later for better ones)
+	std::unordered_map<mapping, int> mapping_methods_scored;
+	std::unordered_map<mappingFields, int> mapping_fields_scored;
+
+	if (err == JVMTI_ERROR_NONE)
+	{
+		// match methods with minecraft methods
+
+		for (int i = 0; i < klass_methods_count; i++)
+		{
+			jmethodID method = methods[i];
+			char* name;
+			char* sig;
+			char* generic;
+			err = jvmti_env->GetMethodName(method, &name, &sig, &generic);
+			if (err != JVMTI_ERROR_NONE)
+				continue;
+
+			uint8_t* bytecodes;
+			jint bytecode_count = 0;
+			err = jvmti_env->GetBytecodes(method, &bytecode_count, &bytecodes);
+			if (err != JVMTI_ERROR_NONE)
+				continue;
+
+			std::vector<uint8_t> current_bytecodes(bytecodes, bytecodes + bytecode_count);
+			mapping max;
+			max = mapping::NONE;
+			float max_score = 0;
+
+			for (const MethodMapping& m : mappings.methods)
+			{
+				if (m.method == mapping::NONE)
+					continue;
+
+				float similarity = math::jaccard_index(m.bytecodes, current_bytecodes);
+				if (similarity > max_score)
+				{
+					max_score = similarity;
+					max = m.method;
+
+					//LOGDEBUG("{} {} = {}", name, m.name, max_score);
+				}
+			}
+
+			if (max != mapping::NONE)
+			{
+				auto it = mapping_methods_scored.find(max);
+				if (it != mapping_methods_scored.end())
+				{
+					if (max_score > it->second)
+					{
+						mappings::methods[max] = { name, sig };
+						it->second = max_score;
+					}
+				}
+				else
+				{
+					mappings::methods[max] = { name, sig };
+					mapping_methods_scored.emplace(max, max_score);
+				}
+			}
+		}
+
+	}
+
+	jint klass_fields_count;
+	jfieldID* fields = nullptr;
+	err = jvmti_env->GetClassFields(klass, &klass_fields_count, &fields);
+
+	if (err == JVMTI_ERROR_NONE)
+	{
+		for (int i = 0; i < klass_fields_count; i++)
+		{
+			jfieldID field = fields[i];
+			char* name;
+			char* sig;
+			char* generic;
+			jint modifiers = -1;
+			err = jvmti_env->GetFieldName(klass, field, &name, &sig, &generic);
+			jvmti_env->GetFieldModifiers(klass, field, &modifiers);
+			if (err != JVMTI_ERROR_NONE)
+				continue;
+
+			mappingFields max;
+			max = mappingFields::NONE;
+			// the lower the better the score 
+			int min_score = std::numeric_limits<int>::max();
+
+			for (const MappingField& f : mappings.fields)
+			{
+				if (f.field == mappingFields::NONE)
+					continue;
+
+				int score = 0;
+				score += abs(f.index - i);
+				if (f.modifiers != modifiers)
+					score += 1;
+
+				//LOGDEBUG("matching {} {}, score: {}", f.name, name, score);
+
+				if (score < min_score)
+				{
+					min_score = score;
+					max = f.field;
+				}
+			}
+
+			if (max != mappingFields::NONE)
+			{
+				auto it = mapping_fields_scored.find(max);
+				if (it != mapping_fields_scored.end())
+				{
+					if (min_score < it->second)
+					{
+						mappings::fields[max] = { name, sig };
+						it->second = min_score;
+					}
+				}
+				else
+				{
+					mappings::fields[max] = { name, sig };
+					mapping_fields_scored.emplace(max, min_score);
+				}
+			}
+		}
+	}
+
+	if (methods)
+		jvmti_env->Deallocate((unsigned char*)methods);
+	if (fields)
+		jvmti_env->Deallocate((unsigned char*)fields);
 }
 
 }

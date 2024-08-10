@@ -67,6 +67,7 @@ public:
 private:
 	static Mappings GetMappingsForClass(JNIEnv* env, jvmtiEnv* jvmti_env, jclass klass, int& class_index);
 
+	static void InitMappingsForClass(JNIEnv* env, jvmtiEnv* jvmti_env, jclass klass, const Mappings& mappings);
 };
 
 }

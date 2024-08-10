@@ -124,7 +124,7 @@ DWORD WINAPI toadll::init()
 	//}
 
 	LOGDEBUG("[init] Client type {}", static_cast<int>(toad::g_curr_client));
-	//
+	
 	std::filesystem::path generated_mappings_file = Logger::getDocumentsFolder();
 	generated_mappings_file /= "mapping_gen_out.txt";
 	if (std::filesystem::exists(generated_mappings_file))
@@ -145,7 +145,7 @@ DWORD WINAPI toadll::init()
 	}
 
 	LOGDEBUG("[init] Mappings");
-	mappings::init_map(g_env, mcclass, eclasstemp, toad::g_curr_client);
+	//mappings::init_map(g_env, mcclass, eclasstemp, toad::g_curr_client);
 
 	g_env->DeleteLocalRef(eclasstemp);
 	g_env->DeleteLocalRef(mcclass);

@@ -66,7 +66,6 @@ namespace toadll::mappings
 			methods[mapping::getBlockPositionFromMovingBlock] = { "getBlockPos", "()Lnet/minecraft/util/BlockPos;" };
 			methods[mapping::isSneaking] = {"isSneaking", "()Z" };
 
-			methods[mapping::getBlockPos] = { "getBlockPos", "()Lnet/minecraft/util/BlockPos;" };
 			//jclass movingblockklass = findclass("net.minecraft.util.MovingObjectPosition", env);
 			//loop_through_class(movingblockklass, env);
 			//methods[mapping::getBlockPositionFromMovingBlock] = {"bridge$getBlockPosition", "SIGNATURE NOT FOUND" };
@@ -83,7 +82,6 @@ namespace toadll::mappings
 			methods[mapping::getStackInSlot] = { "getStackInSlot", "(I)Lnet/minecraft/item/ItemStack;" };
 			methods[mapping::getItem] = { "getItem", "()Lnet/minecraft/item/Item;" };
 			methods[mapping::getInventory] = { "getInventory", "()[Lnet/minecraft/item/ItemStack;" };
-			methods[mapping::getBlockPos] = { "getBlockPos", "()Lnet/minecraft/util/BlockPos;" };
 
 			//methods[mapping::getRotationYaw] = { "bridge$getRotationYaw", "()D" };
 			//methods[mapping::getRotationPitch] = { "bridge$getRotationPitch", "()D" };
@@ -109,16 +107,9 @@ namespace toadll::mappings
 			//methods[mapping::getHurtTime] = { "bridge$getHurtTime", "()I" };
 			methods[mapping::getHealth] = { "getHealth", "()F" };
 
-			// .ActiveRenderInfo
-			methods[mapping::getRenderPos] = { "getPosition", "()Lnet/minecraft/util/Vec3;" };
-
 			fields[mappingFields::modelviewField] = { "MODELVIEW", "Ljava/nio/FloatBuffer;" };
 			fields[mappingFields::viewportField] = { "VIEWPORT", "Ljava/nio/IntBuffer;" };
 			fields[mappingFields::projectionField] = { "PROJECTION", "Ljava/nio/FloatBuffer;" };
-
-			// ENTITY RENDERER
-			methods[mapping::enableLightmap] = { "enableLightmap", "()V" };
-			methods[mapping::disableLightmap] = { "disableLightmap", "()V" };
 
 			// Vec3 class
 			methods[mapping::Vec3Init] = { "<init>", "(DDD)V" };
@@ -217,8 +208,6 @@ namespace toadll::mappings
 			methods[mapping::getStackInSlot] = { "getStackInSlot", "(I)Lnet/minecraft/item/ItemStack;" };
 			methods[mapping::getItem] = { "getItem", "()Lnet/minecraft/item/Item;" };
 
-			methods[mapping::getBlockPos] = { "getBlockPos", "()Lnet/minecraft/util/BlockPos;" };
-
 			//methods[mapping::getRotationYaw] = { "bridge$getRotationYaw", "()D" };
 			//methods[mapping::getRotationPitch] = { "bridge$getRotationPitch", "()D" };
 
@@ -243,16 +232,9 @@ namespace toadll::mappings
 			//methods[mapping::getHurtTime] = { "bridge$getHurtTime", "()I" };
 			methods[mapping::getHealth] = { "getHealth", "()F" };
 
-			// .ActiveRenderInfo
-			methods[mapping::getRenderPos] = { "getPosition", "()Lnet/minecraft/util/Vec3;" };
-
 			fields[mappingFields::modelviewField] = { "modelview", "Ljava/nio/FloatBuffer;" };
 			fields[mappingFields::viewportField] = { "viewport", "Ljava/nio/IntBuffer;" };
 			fields[mappingFields::projectionField] = { "projection", "Ljava/nio/FloatBuffer;" };
-
-			// ENTITY RENDERER
-			methods[mapping::enableLightmap] = { "enableLightmap", "()V" };
-			methods[mapping::disableLightmap] = { "disableLightmap", "()V" };
 
 			// Vec3 class
 			fields[mappingFields::Vec3X] = { "xCoord", "D" };
