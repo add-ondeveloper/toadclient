@@ -17,6 +17,11 @@ namespace toadll::mappings
 		std::string sig;
 	};
 
+	inline const char* klasses[] =
+	{
+		"net."
+	};
+
 	inline std::unordered_map<mapping, MCMap> methods;
 	inline std::unordered_map<mappingFields, MCMap> fields;
 

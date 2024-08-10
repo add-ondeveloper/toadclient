@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "Logger/logger.h"
 
 namespace toadll
 {
@@ -88,6 +89,24 @@ inline Vec3 get_closest_point(const BBox& bb, const Vec3& from)
 	closestPoint.z = std::clamp(from.z, bb.min.z, bb.max.z);
 
 	return closestPoint;
+}
+
+inline void sig_to_class(std::string& signature)
+{
+    if (signature.size() < 2)
+    {
+        LOGERROR("String signature is shorter then 2 characters");
+		return;
+    }
+
+    // L;
+    signature = signature.substr(1, signature.size() - 2);
+
+    for (char c : signature)
+    {
+        if (c == '/')
+            c = '.';
+    }
 }
 
 }

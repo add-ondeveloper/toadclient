@@ -210,6 +210,14 @@ Minecraft::RAYTRACE_BLOCKS_RESULT Minecraft::rayTraceBlocks(Vec3 from, Vec3 dire
 
     if (!blockPosMId)
     {
+        static bool once = true;
+        if (once)
+        {
+            jclass klass = env->GetObjectClass(movingObjPosObj);
+            loop_through_class(klass, env);
+            env->DeleteLocalRef(klass);
+            once = false;
+        }
         result = { -1.5f,-1.5f,-1.5f };
         return RAYTRACE_BLOCKS_RESULT::ERROR;
     }
