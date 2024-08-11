@@ -360,7 +360,7 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 	jmethodID get_klass_name = g_env->GetMethodID(klass, "getName", "()Ljava/lang/String;");
 	if (!get_klass_name)
 	{
-		LOGERROR("[MappingGenerator] Can't find getName");
+		LOGERROR("[MappingGenerator] Can't find String getName()");
 		env->DeleteLocalRef(klass);
 		return "";
 	}
@@ -396,7 +396,7 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 		if (err != JVMTI_ERROR_NONE || 
 			methods_count == 0 ||
 			mappings.methods.size() == 0 || 
-			methods_count_diff / mappings.methods.size() < 0.5f)
+			methods_count_diff / mappings.methods.size() < 0.65f)
 		{
 			if (methods)
 				jvmti_env->Deallocate((unsigned char*)methods);
@@ -410,13 +410,14 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 		{
 			uint8_t* bytecodes;
 			jint bytecode_count = 0;
+
+			// returns error 104 JVMTI_ERROR_NATIVE_METHOD sometimes
 			err = jvmti_env->GetBytecodes(methods[j], &bytecode_count, &bytecodes);
+
 			if (err != JVMTI_ERROR_NONE)
-			{
-				// returns error 104 JVMTI_ERROR_NATIVE_METHOD sometimes
-				LOGWARN("[MappingGenerator] GetBytecodes returned error: {}", (int)err);
 				continue;
-			}
+			if (bytecode_count == 0)
+				continue;
 
 			std::vector<uint8_t> current_bytecodes(bytecodes, bytecodes + bytecode_count);
 			std::set<int> ignore_method_bytecodes{};
@@ -425,31 +426,21 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 			jvmti_env->GetMethodModifiers(methods[j], &mod);
 			current_bytecodes.emplace_back(mod);
 			current_bytecodes.emplace_back(j);
-			
-			// match 
+
+			// file mappings
 			for (int k = 0; k < mapping_method_bytecodes.size(); k++)
 			{
 				if (ignore_method_bytecodes.contains(k))
-					continue;				
+					continue;
 				if (mapping_method_bytecodes[k].empty() || current_bytecodes.empty())
 					continue;
 
 				float similarity = math::jaccard_index(current_bytecodes, mapping_method_bytecodes[k]);
-				if (similarity > 0.7f)
+				if (similarity > 0.5f)
 				{
-					//std::string a;
-					//std::string b;
-
-					//for (auto c : current_bytecodes)
-					//	a += std::to_string(c) + ' ';
-					//for (auto c : mapping_method_bytecodes[k])
-					//	b += std::to_string(c) + ' ';
-
-					//LOGDEBUG("{} {} = {}", a, b, similarity);
 					similar_counter++;
 					similarity_score += similarity;
 					ignore_method_bytecodes.emplace(k);
-					k = 0;
 				}
 			}
 
@@ -460,7 +451,8 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 			jvmti_env->Deallocate((unsigned char*)methods);
 
 		//LOGDEBUG("[MappingGenerator] {} / {} = {}", similar_counter, methods_count, (float)similar_counter / ((float)methods_count + FLT_EPSILON));
-		if ((float)similar_counter / ((float)methods_count + FLT_EPSILON) > 0.7f)
+
+		if ((float)similar_counter / ((float)methods_count + FLT_EPSILON) > 0.5f)
 		{
 			LOGDEBUG("[MappingGenerator] Found a possibility with score {}", similarity_score);
 			jstring klass_name = (jstring)env->CallObjectMethod(classes[i], get_klass_name);
