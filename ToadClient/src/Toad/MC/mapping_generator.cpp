@@ -257,62 +257,39 @@ void MappingGenerator::InitMappings(JNIEnv* env, jvmtiEnv* jvmti_env, const std:
 			env->DeleteLocalRef(klass);
 		};
 
-	//std::vector<Mappings> klass_mappings;
-	//klass_mappings.emplace_back()
-
 	//FindClassTypes(env, jvmti_env, klass_mappings);
 	//InitMappingsForClass(env, jvmti_env, klasses, klass_mappings);
-
-	json mc_data;
-	config::get_json_element(mc_data, data, "mc");
-
-	Mappings mc_mappings = Mappings::Deserialize(mc_data["mappings"]);
-
 	// #TODO: optimize later 
 
 	// #TODO: sorted methods count 
 	//std::queue<int> min_methods_count;
 	//min_methods_count.push(0);
 
+	json mc_data;
+	config::get_json_element(mc_data, data, "mc");
+	Mappings mc_mappings = Mappings::Deserialize(mc_data["mappings"]);
 	std::string mc_class_name = FindClassTypes(env, jvmti_env, mc_mappings);
 	jclass minecraft = findclass(mc_class_name.c_str(), env);
 	InitMappingsForClass(env, jvmti_env, minecraft, mc_mappings);
 	Minecraft::unsupported_mc_class_name = mc_class_name;
 	env->DeleteLocalRef(minecraft);
 
-	//jint method_count;
-	//jmethodID* methodids;
-	//jvmti_env->GetClassMethods(world, &method_count, &methodids);
-	//for (int i = 0; i < method_count; i++)
-	//{
-	//	jint bytecodes_count = 0;
-	//	unsigned char* b;
-
-	//	jvmti_env->GetBytecodes(methodids[i], &bytecodes_count, &b);
-	//	std::string bcodes;
-	//	for (int j = 0; j < bytecodes_count; j++)
-	//	{
-	//		bcodes += std::to_string(b[j]) + ' ';
-	//	}
-	//	LOGDEBUG("{} {}", i, bcodes);
-	//}
-
-	init_for_data("player");
-	init_for_data("mop");
-	init_for_data("world");
-	init_for_data("elb");
-	init_for_data("entity");
-	init_for_data("ari");
-	init_for_data("vec3i");
-	init_for_data("vec3");
-	init_for_data("blockpos");
-	init_for_data("entityplayer");
-	init_for_data("timer");
-	init_for_data("guichest");
-	init_for_data("itemstack");
-	init_for_data("block");
-	init_for_data("blockstate");
-	init_for_data("iinventory");
+	//init_for_data("player");
+	//init_for_data("mop");
+	//init_for_data("world");
+	//init_for_data("elb");
+	//init_for_data("entity");
+	//init_for_data("ari");
+	//init_for_data("vec3i");
+	//init_for_data("vec3");
+	//init_for_data("blockpos");
+	//init_for_data("entityplayer");
+	//init_for_data("timer");
+	//init_for_data("guichest");
+	//init_for_data("itemstack");
+	//init_for_data("block");
+	//init_for_data("blockstate");
+	//init_for_data("iinventory");
 
 	std::set<int> mappings_methods_initialized{};
 	std::set<int> mappings_fields_initialized{};
