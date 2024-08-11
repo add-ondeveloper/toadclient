@@ -392,11 +392,14 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 		jmethodID* methods = nullptr;
 		jvmtiError err = jvmti_env->GetClassMethods(classes[i], &methods_count, &methods);
 
-		if (err != JVMTI_ERROR_NONE || methods_count < (int)mappings.methods.size())
+		float methods_count_diff = abs(methods_count - (int)mappings.methods.size());
+		if (err != JVMTI_ERROR_NONE || 
+			methods_count == 0 ||
+			mappings.methods.size() == 0 || 
+			methods_count_diff / mappings.methods.size() < 0.5f)
 		{
 			if (methods)
 				jvmti_env->Deallocate((unsigned char*)methods);
-
 			continue;
 		}
 
