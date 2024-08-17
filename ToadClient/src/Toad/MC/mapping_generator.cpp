@@ -7,13 +7,6 @@
 
 #include "../../Loader/src/Application/config.h"
 
-#define JVMTICALL(f, ...)													\
-if (auto res = f(__VA_ARGS__); res != jvmtiError::JVMTI_ERROR_NONE)			\
-{																			\
-	LOGERROR("[MappingGenerator] Failed to call {}, {}", #f, (int)res);		\
-	return;																	\
-}
-
 namespace toadll
 {
 
@@ -241,38 +234,49 @@ void MappingGenerator::InitMappings(JNIEnv* env, jvmtiEnv* jvmti_env, const std:
 	{
 		data = json::parse(f);
 	}
-	catch (json::parse_error& e)
+	catch (const json::parse_error& e)
 	{
+		LOGERROR("[MappingGenerator] Json parse error: {}", e.what());
 		return;
 	}
 
-	const auto init_for_data = [&env, &jvmti_env, &data](std::string_view json_key)
-		{
-			json klass_data;
-			config::get_json_element(klass_data, data, json_key);
-			Mappings klass_mappings = Mappings::Deserialize(klass_data["mappings"]);
-			std::string klass_name = FindClassTypes(env, jvmti_env, klass_mappings);
-			jclass klass = findclass(klass_name.c_str(), env);
-			InitMappingsForClass(env, jvmti_env, klass, klass_mappings);
-			env->DeleteLocalRef(klass);
-		};
+	//const auto init_for_data = [&env, &jvmti_env, &data](std::string_view json_key)
+	//	{
+	//		json klass_data;
+	//		config::get_json_element(klass_data, data, json_key);
+	//		Mappings klass_mappings = Mappings::Deserialize(klass_data["mappings"]);
+	//		std::string klass_name = FindClassTypes(env, jvmti_env, klass_mappings);
+	//		jclass klass = findclass(klass_name.c_str(), env);
+	//		InitMappingsForClass(env, jvmti_env, klass, klass_mappings);
+	//		env->DeleteLocalRef(klass);
+	//	};
 
-	//FindClassTypes(env, jvmti_env, klass_mappings);
-	//InitMappingsForClass(env, jvmti_env, klasses, klass_mappings);
-	// #TODO: optimize later 
+	//std::vector<std::string> json_keys; 
+	std::vector<Mappings> mappings;
+	json klass_data;
+	config::get_json_element(klass_data, data, "mc");
+	mappings.emplace_back(Mappings::Deserialize(klass_data["mappings"]));
+	
+	std::vector<FoundMappingKlassName> res = FindClassTypes(env, jvmti_env, mappings);
+
+	for (const auto& [mapping, klass_name] : res)
+	{
+		jclass klass = findclass(klass_name.c_str(), env);
+		InitMappingsForClass(env, jvmti_env, klass, mapping);
+		env->DeleteLocalRef(klass);
+	}
 
 	// #TODO: sorted methods count 
 	//std::queue<int> min_methods_count;
 	//min_methods_count.push(0);
-
-	json mc_data;
-	config::get_json_element(mc_data, data, "mc");
-	Mappings mc_mappings = Mappings::Deserialize(mc_data["mappings"]);
-	std::string mc_class_name = FindClassTypes(env, jvmti_env, mc_mappings);
-	jclass minecraft = findclass(mc_class_name.c_str(), env);
-	InitMappingsForClass(env, jvmti_env, minecraft, mc_mappings);
-	Minecraft::unsupported_mc_class_name = mc_class_name;
-	env->DeleteLocalRef(minecraft);
+	//json mc_data;
+	//config::get_json_element(mc_data, data, "mc");
+	//Mappings mc_mappings = Mappings::Deserialize(mc_data["mappings"]);
+	//std::string mc_class_name = FindClassTypes(env, jvmti_env, mc_mappings);
+	//jclass minecraft = findclass(mc_class_name.c_str(), env);
+	//InitMappingsForClass(env, jvmti_env, minecraft, mc_mappings);
+	//Minecraft::unsupported_mc_class_name = mc_class_name;
+	//env->DeleteLocalRef(minecraft);
 
 	//init_for_data("player");
 	//init_for_data("mop");
@@ -325,67 +329,101 @@ void MappingGenerator::InitMappings(JNIEnv* env, jvmtiEnv* jvmti_env, const std:
 	}
 }
 
-std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, const Mappings& mappings)
+// change pair to struct 
+std::vector<FoundMappingKlassName> MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, const std::vector<Mappings>& klass_mappings)
 {
-	// to string method id for class names
+	std::vector<FoundMappingKlassName> res{};
+
+	// get name method id for getting class names
 	jclass klass = findclass("java/lang/Class", g_env);
 	if (!klass)
 	{
 		LOGERROR("[MappingGenerator] Can't find class Class");
-		return "";
+		return res;
 	}
 	jmethodID get_klass_name = g_env->GetMethodID(klass, "getName", "()Ljava/lang/String;");
 	if (!get_klass_name)
 	{
 		LOGERROR("[MappingGenerator] Can't find String getName()");
 		env->DeleteLocalRef(klass);
-		return "";
+		return res;
 	}
 	env->DeleteLocalRef(klass);
 
-	std::vector<std::vector<uint8_t>> mapping_method_bytecodes;
-	mapping_method_bytecodes.reserve(mappings.methods.size());
-	for (MethodMapping method : mappings.methods)
+	// bytecodes per mapping
+	std::unordered_map<size_t, std::vector<std::vector<uint8_t>>> mappings_similarity_check{};
+
+	struct KlassAndScore
 	{
-		method.bytecodes.emplace_back(method.modifiers);
-		method.bytecodes.emplace_back(method.index);
-		mapping_method_bytecodes.emplace_back(method.bytecodes);
+		KlassAndScore(std::string klass_name, float score)
+			: klass_name(std::move(klass_name)), score(score)
+		{}
+
+		std::string klass_name;
+		float score;
+	};
+
+	// possibilities 
+	std::unordered_map<size_t, std::vector<KlassAndScore>> possible_klasses{};
+
+	for (size_t i = 0; i < klass_mappings.size(); i++) 
+	{
+		for (MethodMapping method : klass_mappings[i].methods)
+		{
+			method.bytecodes.emplace_back(method.modifiers);
+			method.bytecodes.emplace_back(method.index);
+			mappings_similarity_check[i].emplace_back(method.bytecodes);
+		}
 	}
 
-	LOGDEBUG("[MappingGenerator] Mapping bytecodes size: {}", mapping_method_bytecodes.size());
+	for (const auto& mapping : mappings_similarity_check)
+		LOGDEBUG("[MappingGenerator] index: {} size: {}", mapping.first, mapping.second.size());
 
 	jint class_count = 0;
-	jclass* classes;
+	jclass* classes = nullptr;
 	jvmti_env->GetLoadedClasses(&class_count, &classes);
 
-	LOGDEBUG("[MappingGenerator] Classes: {}", class_count);
+	LOGDEBUG("[MappingGenerator] Loaded classes: {}", class_count);
 
-	std::vector<std::pair<std::string, float>> possible_classes{};
+	// similarity score for class [klass mapping index, [klass index, score]]
+	std::unordered_map<size_t, std::unordered_map<int, float>> similarity_score;
+
+	// how many methods are similar enough
+	std::unordered_map<size_t, std::unordered_map<int, int>> similar_counter;
 
 	for (int i = 0; i < class_count; i++)
 	{
-		// get methods
 		jint methods_count = 0;
 		jmethodID* methods = nullptr;
 		jvmtiError err = jvmti_env->GetClassMethods(classes[i], &methods_count, &methods);
 
-		float methods_count_diff = abs(methods_count - (int)mappings.methods.size());
-		if (err != JVMTI_ERROR_NONE || 
-			methods_count == 0 ||
-			mappings.methods.size() == 0 || 
-			methods_count_diff / mappings.methods.size() < 0.65f)
-		{
-			if (methods)
-				jvmti_env->Deallocate((unsigned char*)methods);
+		if (err != JVMTI_ERROR_NONE || methods_count == 0)
 			continue;
+
+		// mappings indexes that can be skipped for this iteration
+		std::set<size_t> ignore_mappings_index{};
+
+		// check if we can skip some checks for certain mappings.
+		for (size_t j = 0; j < klass_mappings.size(); j++)
+		{
+			// check if methods count is too different
+			float methods_count_diff = abs(methods_count - (int)klass_mappings[j].methods.size());
+			if (err != JVMTI_ERROR_NONE ||
+				methods_count == 0 ||
+				klass_mappings[j].methods.empty() ||	
+				methods_count_diff / klass_mappings[j].methods.size() > 0.6f)
+			{
+				ignore_mappings_index.emplace(j);
+			}
 		}
 
-		float similarity_score = 0;
-		int similar_counter = 0;
+		// all mappings can be ignored so skip
+		if (ignore_mappings_index.size() == klass_mappings.size())
+			continue;
 
 		for (int j = 0; j < methods_count; j++)
 		{
-			uint8_t* bytecodes;
+			uint8_t* bytecodes = nullptr;
 			jint bytecode_count = 0;
 
 			// returns error 104 JVMTI_ERROR_NATIVE_METHOD sometimes
@@ -396,82 +434,96 @@ std::string MappingGenerator::FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, c
 			if (bytecode_count == 0)
 				continue;
 
-			std::vector<uint8_t> current_bytecodes(bytecodes, bytecodes + bytecode_count);
-			std::set<int> ignore_method_bytecodes{};
+			std::vector<uint8_t> current_method_info(bytecodes, bytecodes + bytecode_count);
 
 			jint mod = -1;
 			jvmti_env->GetMethodModifiers(methods[j], &mod);
-			current_bytecodes.emplace_back(mod);
-			current_bytecodes.emplace_back(j);
+			current_method_info.emplace_back(mod);
+			current_method_info.emplace_back(j);
 
-			// file mappings
-			for (int k = 0; k < mapping_method_bytecodes.size(); k++)
+			for (const auto& [index, mapping_function_info] : mappings_similarity_check)
 			{
-				if (ignore_method_bytecodes.contains(k))
-					continue;
-				if (mapping_method_bytecodes[k].empty() || current_bytecodes.empty())
+				if (ignore_mappings_index.contains(index))
 					continue;
 
-				float similarity = math::jaccard_index(current_bytecodes, mapping_method_bytecodes[k]);
-				if (similarity > 0.5f)
+				if (mapping_function_info.empty() || current_method_info.empty())
+					continue;
+
+				// match methods 
+				for (const std::vector<uint8_t>& method_info : mapping_function_info)
 				{
-					similar_counter++;
-					similarity_score += similarity;
-					ignore_method_bytecodes.emplace(k);
+					float similarity = math::jaccard_index(current_method_info, method_info);
+					if (similarity > 0.65f)
+					{
+						similar_counter[index][i]++;
+						similarity_score[index][i] += similarity;
+					}
 				}
 			}
-
+		
 			jvmti_env->Deallocate(bytecodes);
 		}
 
-		if (methods)
-			jvmti_env->Deallocate((unsigned char*)methods);
+		jvmti_env->Deallocate((unsigned char*)methods);
 
 		//LOGDEBUG("[MappingGenerator] {} / {} = {}", similar_counter, methods_count, (float)similar_counter / ((float)methods_count + FLT_EPSILON));
-
-		if ((float)similar_counter / ((float)methods_count + FLT_EPSILON) > 0.5f)
+		
+		for (size_t j = 0; j < klass_mappings.size(); j++)
 		{
-			LOGDEBUG("[MappingGenerator] Found a possibility with score {}", similarity_score);
-			jstring klass_name = (jstring)env->CallObjectMethod(classes[i], get_klass_name);
+			if (ignore_mappings_index.contains(j))
+				continue;
 
-			if (!klass_name)
+			if ((float)similar_counter[j][i] / (float)methods_count > 0.6f)
 			{
-				LOGERROR("[MappingGenerator] Can't get name of possible minecraft class");
-				break;
+				LOGDEBUG("[MappingGenerator] Found a possibility with score {}", similarity_score[j][i]);
+				jstring klass_name_obj = (jstring)env->CallObjectMethod(classes[i], get_klass_name);
+
+				if (!klass_name_obj)
+				{
+					LOGERROR("[MappingGenerator] Can't get name of possible class");
+					continue;
+				}
+
+				// add to possible minecraft class 
+				std::string klass_name_str = jstring2string(klass_name_obj, env);
+				LOGDEBUG("[MappingGenerator] Name of class: {}", klass_name_str);
+				possible_klasses[j].emplace_back(std::move(klass_name_str), similarity_score[j][i]);
+
+				env->DeleteLocalRef(klass_name_obj);
 			}
-
-			// add to possible minecraft class 
-			possible_classes.emplace_back(jstring2string(klass_name, env), similarity_score);
-
-			env->DeleteLocalRef(klass_name);
 		}
 	}
 
 	jvmti_env->Deallocate((unsigned char*)classes);
 
-	LOGDEBUG("[MappingGenerator] Class possibilities: {}", possible_classes.size());
-	float max_score = 0;
-	int index = -1;
-	for (int i = 0; i < possible_classes.size(); i++)
+	LOGDEBUG("[MappingGenerator] found {}/{}", possible_klasses.size(), klass_mappings.size());
+	for (size_t i = 0; i < klass_mappings.size(); i++)
 	{
-		const auto& [name, score] = possible_classes[i];
-		if (score > max_score)
-		{
-			index = i;
-			max_score = score;
-		}
+		if (possible_klasses.contains(i))
+			LOGDEBUG("[MappingGenerator] Class possibilities for {}: {}", i, possible_klasses[i].size());
 	}
 
-	if (index != -1)
+	for (size_t i = 0; i < klass_mappings.size(); i++)
 	{
-		LOGDEBUG("[MappingGenerator] Found at {} with score {} name: {}", index, max_score, possible_classes[index].first);
-		return possible_classes[index].first;
+		std::string klass_name;
+		float max_score = 0;
+		int index = -1;
+
+		for (size_t j = 0; j < possible_klasses[i].size(); j++)
+		{
+			if (possible_klasses[i][j].score > max_score)
+			{
+				index = j;
+				max_score = possible_klasses[i][j].score;
+				klass_name = possible_klasses[i][j].klass_name;
+			}
+		}
+		
+		LOGDEBUG("[MappingGenerator] Result for mapping {} with name {} and score {}", i, klass_name, max_score);
+		res.emplace_back(klass_mappings[i], klass_name);
 	}
-	else
-	{
-		LOGDEBUG("[MappingGenerator] Couldn't find class");
-		return "";
-	}
+
+	return res;
 }
 
 float get_similarity(jclass klass, const Mappings& mapping)

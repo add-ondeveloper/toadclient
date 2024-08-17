@@ -46,6 +46,12 @@ public:
 	static Mappings Deserialize(const nlohmann::json& data);
 };
 
+struct FoundMappingKlassName
+{
+	Mappings mappings;
+	std::string found_klass_name;
+};
+
 // generate mapping patterns based on a minecraft version where there is hardcoded mappings already correct
 // Use Generate after intializing mappings 
 class MappingGenerator
@@ -63,7 +69,7 @@ public:
 	// apply mappings from file
 	//static void GetMappingsFromFile(JNIEnv* jni_env, jvmtiEnv* jvmti_env, const std::filesystem::path& json_file);
 
-	static std::string FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, const Mappings& mappings);
+	static std::vector<FoundMappingKlassName> FindClassTypes(JNIEnv* env, jvmtiEnv* jvmti_env, const std::vector<Mappings>& mappings);
 private:
 	static Mappings GetMappingsForClass(JNIEnv* env, jvmtiEnv* jvmti_env, jclass klass, int& class_index);
 
