@@ -5,11 +5,7 @@
 #include <set>
 #include <iostream>
 
-#ifdef TOAD_LOADER
-#include "../../ToadClient/vendor/nlohmann/json.hpp"
-#else
 #include "nlohmann/json.hpp"
-#endif
 
 namespace config
 {
