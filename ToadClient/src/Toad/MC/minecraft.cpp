@@ -25,7 +25,7 @@ jclass Minecraft::getMcClass()
 {
     if (m_mcclass == nullptr)
     {
-        m_mcclass = findclass(toad::g_curr_client == toad::MC_CLIENT::NOT_SUPPORTED ? "ave" : "net.minecraft.client.Minecraft", env);
+        m_mcclass = (jclass)env->NewGlobalRef(findclass(toad::g_curr_client == toad::MC_CLIENT::NOT_SUPPORTED ? "ave" : "net.minecraft.client.Minecraft", env));
     }
     return m_mcclass;
 }
