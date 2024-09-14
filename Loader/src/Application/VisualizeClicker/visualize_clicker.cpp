@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <queue>
+#include <functional>
 
 #include "visualize_clicker.h"
 
@@ -36,9 +37,16 @@ bool VisualizeClicker::IsStarted() const
 	return m_thread_running;
 }
 
-int VisualizeClicker::GetCPS() const
+float VisualizeClicker::GetCPS() const
 {
-	return (int)m_click_queue.size();
+	if (m_click_queue.size() <= 2)
+		return 0.f;
+
+	float time_span = m_click_queue.front().Elapsed<>() - m_click_queue.back().Elapsed<>();
+	if (time_span <= 0.f)
+		return 0.f;
+
+	return (float)m_click_queue.size() / (time_span / 1000.f); // ms to seconds
 }
 
 toadll::Randomization VisualizeClicker::GetRand()
@@ -57,6 +65,11 @@ void VisualizeClicker::SetRand(const toadll::Randomization& rand)
 	m_rand = rand;
 	if (restart)
 		Start();
+}
+
+void VisualizeClicker::SetClickCallback(const std::function<void()>& f)
+{
+	m_callback = f;
 }
 
 void VisualizeClicker::clicking_thread()
@@ -82,6 +95,9 @@ void VisualizeClicker::clicking_thread()
 					m_click_queue.pop();
 				}
 		}
+
+		if (m_callback)
+			m_callback();
 	}
 }
 
@@ -105,9 +121,6 @@ void VisualizeClicker::click_up()
 	apply_rand(m_rand.inconsistencies2);
 
 	m_rand_delay_timer.Start(); // where the sleep should be in the actual clicker
-
-	// don't add, only for click_down
-	//m_trackCpsQueue.emplace();
 
 	update_rand();
 }
@@ -163,13 +176,15 @@ void VisualizeClicker::apply_rand(std::vector<toadll::Inconsistency>& inconsiste
 
 void VisualizeClicker::update_rand()
 {
-	static toadll::Timer timer;
+	using namespace toadll;
+
+	static Timer timer;
 	timer.Start();
-	m_rand.inconsistency_delay = std::clamp(std::lerp(m_rand.inconsistency_delay, 0.f, 0.3f), m_rand.inconsistency_delay, 0.f);
+	m_rand.inconsistency_delay = std::lerp(m_rand.inconsistency_delay, 0.f, 0.3f);
 
-	const int rand_100 = toadll::rand_int(0, 100);
+	const int rand_100 = rand_int(0, 100);
 
-	for (auto& i : m_rand.inconsistencies)
+	for (Inconsistency& i : m_rand.inconsistencies)
 		if (!i.start && ++i.frequency_counter >= i.frequency)
 		{
 			if (i.chance >= rand_100)
@@ -178,16 +193,16 @@ void VisualizeClicker::update_rand()
 				i.frequency_counter -= i.frequency_counter * (int)((float)i.frequency_counter / (float)i.frequency * 0.75f);
 		}
 
-	for (auto& i2 : m_rand.inconsistencies2)
+	for (Inconsistency& i2 : m_rand.inconsistencies2)
 		if (!i2.start && ++i2.frequency_counter >= i2.frequency)
 		{
-			if (i2.chance <= rand_100)
+			if (i2.chance >= rand_100)
 				i2.start = true;
 			else
 				i2.frequency_counter -= i2.frequency_counter * (int)((float)i2.frequency_counter / (float)i2.frequency * 0.75f);
 		}
 
-	for (auto& b : m_rand.boosts)
+	for (Boost& b : m_rand.boosts)
 	{
 		if (b.paused)
 			continue;
@@ -196,13 +211,14 @@ void VisualizeClicker::update_rand()
 		{
 			b.start = true;
 
-			// because we are boosting the cps we want to
-			// make boosting less frequent and pause frequency counters for other boosters
-			for (auto& b_other : m_rand.boosts)
+			for (Boost& b_other : m_rand.boosts)
 			{
 				if (b_other.id == b.id)
 					continue;
-				b_other.frequency_counter -= b_other.frequency_counter * (int)((float)b_other.frequency_counter / (float)b_other.frequency * 0.75f);
+
+				// because we are boosting the cps we want to
+				// make boosting less frequent and pause frequency counters for other boosters
+				b_other.frequency_counter += 25;
 				b_other.paused = true;
 			}
 		}

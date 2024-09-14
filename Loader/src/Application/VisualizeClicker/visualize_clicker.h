@@ -10,25 +10,23 @@ public:
 	~VisualizeClicker();
 
 public:
+	float d_time = 0;
+
 	void Start();
 	void Stop();
 
 	bool IsStarted() const;
 
-public:
-	int GetCPS() const;
+	float GetCPS() const;
 	toadll::Randomization GetRand();
 
-public:
 	void SetRand(const toadll::Randomization& rand);
 
-public:
-	float d_time = 0;
+	void SetClickCallback(const std::function<void()>& f);
 
 private:
 	void clicking_thread();
 
-private:
 	// same as clicker
 	void click_down();
 	void click_up();
@@ -44,8 +42,9 @@ private:
 	std::thread m_clicking_thread;
 	std::atomic_bool m_thread_running = false;
 
-private:
 	// same as left clicker 
 	toadll::Randomization m_rand = toad::left_clicker::rand;
+
+	std::function<void()> m_callback;
 };
 
