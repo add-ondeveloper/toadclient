@@ -5,6 +5,7 @@
 #include "Fonts/fa-solid-900Font.h"
 #include "imgui/imgui_impl_dx9.h"
 #include "imgui/imgui_impl_win32.h"
+#include "implot/implot.h"
 
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -146,6 +147,7 @@ void ImGuiWindow::CreateImGuiWindow(const std::string& window_title, int win_hei
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
 
     m_io = &ImGui::GetIO(); (void)m_io;
     //m_io->ConfigWindowsMoveFromTitleBarOnly = true;

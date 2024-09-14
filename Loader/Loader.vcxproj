@@ -97,6 +97,7 @@
     <ClInclude Include="src\Application\Fonts\icons.h" />
     <ClInclude Include="src\toad.h" />
     <ClInclude Include="src\utils\block_map.h" />
+    <ClInclude Include="src\utils\file_dialog.h" />
     <ClInclude Include="src\utils\helpers.h" />
     <ClInclude Include="src\utils\imfilebrowser.h" />
     <ClInclude Include="src\Application\imgui_window.h" />
@@ -110,6 +111,8 @@
     <ClCompile Include="..\vendor\imgui\imgui_impl_win32.cpp" />
     <ClCompile Include="..\vendor\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\vendor\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="..\vendor\implot\implot.cpp" />
+    <ClCompile Include="..\vendor\implot\implot_items.cpp" />
     <ClCompile Include="src\mapping_object.cpp" />
     <ClCompile Include="src\Application\config.cpp" />
     <ClCompile Include="src\global_settings.h" />
@@ -118,6 +121,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\toad.cpp" />
     <ClCompile Include="src\Application\ui.cpp" />
+    <ClCompile Include="src\utils\file_dialog.cpp" />
     <ClCompile Include="src\utils\helpers.cpp" />
     <ClCompile Include="src\Application\imgui_window.cpp" />
     <ClCompile Include="src\Application\VisualizeClicker\visualize_clicker.cpp" />

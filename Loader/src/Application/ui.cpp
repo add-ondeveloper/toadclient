@@ -4,6 +4,7 @@
 #include "inject/injector.h"
 #endif
 
+#include "implot/implot.h"
 #include <string>
 
 std::thread init_thread;
@@ -342,26 +343,58 @@ namespace toad::ui
 
     void clicker_rand_visualizer(bool* enabled)
     {
-        ImGui::Begin("clicker rand visualize", enabled, ImGuiWindowFlags_NoSavedSettings);
+        ImGui::Begin("clicker rand visualize", enabled, ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar);
         {
-            static bool
-                show_rand = false,
-                show_graph = false,
-                show_playback = false;
+            static bool show_rand = false;
+			static bool show_graph = false;
+			static bool show_playback = false;
+
+			static std::map<float, uint32_t> cps_counter{};
+            const auto click_callback = []
+                {
+                    float cps = std::round(visual_clicker.GetCPS() * 100) / 100;
+                    if (cps_counter.contains(cps))
+                        cps_counter[cps]++;
+                    else 
+						cps_counter[cps] = 1;
+                };
 
             visual_clicker.d_time = ImGui::GetIO().DeltaTime;
+
+            std::filesystem::path opened_file;
             if (ImGui::BeginMenuBar())
             {
-                if (ImGui::BeginMenu("Extra"))
+                if (ImGui::BeginMenu("File"))
                 {
-                    ImGui::MenuItem("Show Graph", nullptr, &show_graph);
-                    ImGui::MenuItem("Show Playback", nullptr, &show_playback);
-                    ImGui::MenuItem("Show Rand Status", nullptr, &show_rand);
-
+                    if (ImGui::MenuItem("Open"))
+                    {
+                        std::vector<std::string> file_types {".txt"};
+                        opened_file = FileDialogGetFile(get_exe_path(), file_types);
+                    }
                     ImGui::EndMenu();
-                }
+				}
+
+                if (ImGui::BeginMenu("Extra"))
+				{
+                    if (ImGui::MenuItem("Show Graph", nullptr, &show_graph))
+                    {
+                        cps_counter.clear();
+                        visual_clicker.SetClickCallback(click_callback);
+                    }
+
+					ImGui::MenuItem("Show Playback", nullptr, &show_playback);
+					ImGui::MenuItem("Show Rand Status", nullptr, &show_rand);
+
+					ImGui::EndMenu();
+				}
 
                 ImGui::EndMenuBar();
+            }
+
+            if (!opened_file.empty())
+            {
+
+                opened_file.clear();
             }
 
             bool is_playing = visual_clicker.IsStarted();
@@ -371,38 +404,56 @@ namespace toad::ui
                 is_playing ? visual_clicker.Start() : visual_clicker.Stop();
             }
 
-            ImGui::Text("CPS: %d", visual_clicker.GetCPS());
+            ImGui::Text("CPS: %.2f", visual_clicker.GetCPS());
 
             const auto& rand = visual_clicker.GetRand();
             ImGui::Text("range(%f - %f) | delay: %f", rand.edited_min, rand.edited_max, rand.delay);
             ImGui::Text("inconsistency delay: %f", rand.inconsistency_delay);
+            
+            if (show_graph)
+            {
+                if (!cps_counter.empty())
+                {
+					std::vector<float> x{};
+					std::vector<float> y{};	
 
-            /* static bool show_cps_bounds = false;
-             ImGui::Checkbox("show cps bounds", &show_cps_bounds);
+                    for (const auto& [cps, count] : cps_counter)
+                    {
+                        if (count == 0)
+                            continue;
 
-             if (show_cps_bounds)
-             {
-                 const auto draw = ImGui::GetWindowDrawList();
-                 for (const auto& b : rand.boosts)
-                 {
-                     b.amount_ms* b.transition_duration;
-                 }
-             }*/
+                        x.emplace_back(cps);
+                        y.emplace_back((float)count);
+                    }
+
+                    static ImPlotLineFlags plot_flags = ImPlotLineFlags_None;
+
+                    if (ImPlot::BeginPlot("distribution", { -1, 0 }))
+                    {
+                        ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_AutoFit, ImPlotAxisFlags_AutoFit);
+
+						float range = *std::max_element(x.begin(), x.end()) - *std::min_element(x.begin(), x.end());
+						ImPlot::SetupAxisFormat(ImAxis_X1, "%.2f");
+						ImPlot::PlotLine("dis", x.data(), y.data(), x.size(), plot_flags);
+
+                        ImPlot::EndPlot();
+                    }
+                    //ImGui::PlotLines("distribution", x.data(), (int)x.size(), 0, nullptr, FLT_MIN, FLT_MAX, { 0, 70.f });
+
+                    if (ImGui::Button("Clear"))
+                        cps_counter.clear();
+                }
+            }
 
             ImGui::End();
         }
     }
-
-    static ImGui::FileBrowser espFontDialog;
 
     void esp_visualizer(bool* enabled)
     {
         static bool once = false;
         if (!once)
         {
-            espFontDialog.SetTitle("select a TrueType Font");
-            espFontDialog.SetTypeFilters({ ".ttf" });
-
             ImGui::SetNextWindowSize({ 400, 700 });
             once = true;
         }
@@ -546,9 +597,11 @@ namespace toad::ui
                 ImGui::Text("Font: %s", name.c_str());
                 ImGui::Text("Path: %s", path.c_str());
 
+                std::filesystem::path selected_font_file = "";
                 if (ImGui::Button("..."))
                 {
-                    espFontDialog.Open();
+                    std::vector<std::string> file_types = { ".ttf" };
+                    selected_font_file = FileDialogGetFile(get_exe_path().string(), file_types);
                 }
 
                 if (ImGui::Button("Set Default Font"))
@@ -562,15 +615,14 @@ namespace toad::ui
 #endif
                 }
 
-                if (espFontDialog.HasSelected())
+                if (!selected_font_file.empty())
                 {
-                    const auto selected = espFontDialog.GetSelected();
-                    esp::font_path = selected.string();
+                    esp::font_path = selected_font_file.string();
 
                     path = esp::font_path.substr(0, esp::font_path.find_last_of("/\\") + 1);
-                    name = selected.filename().string();
+                    name = selected_font_file.filename().string();
+                    selected_font_file.clear();
 
-                    espFontDialog.ClearSelected();
                     esp::update_font_flag = true;
 #ifdef TOAD_LOADER
                     Application::Get()->GetWindow()->AddFontTTF(esp::font_path);
@@ -607,8 +659,6 @@ namespace toad::ui
         ImGui::EndChild();
 
         ImGui::End();
-
-        espFontDialog.Display();
     }
 
     void chest_stealer_slotpos_setter(bool* enabled)
