@@ -9,11 +9,11 @@
 
 namespace config
 {
-	inline std::set<std::string> logged_invalid_keys{};
-
 	template<typename T>
 	bool get_json_element(T& val, const nlohmann::json& data, std::string_view key) noexcept
 	{
+		static std::set<std::string> logged_invalid_keys{};
+
 		if (data.contains(key) && !data.at(key).is_null())
 		{
 			try

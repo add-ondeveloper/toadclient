@@ -11,31 +11,33 @@
 using namespace toadll;
 
 // for getting settings from loader
-std::thread Tupdate_settings;
+static std::thread Tupdate_settings;
 
-inline std::vector<std::pair<std::thread, std::string&>> cmodule_threads;
+inline static std::vector<std::pair<std::thread, std::string&>> cmodule_threads;
 
 /// called when wanting to un-inject and cleans up
-extern void clean_up(int exitcode = 0, std::string_view msg = "");
+static void clean_up(int exitcode = 0, std::string_view msg = "");
 
 /// Update the settings from the loader
 ///
 ///	@return False when it failed to read or open the settings
-extern bool UpdateSettings();
+static bool UpdateSettings();
 
 /// starts the cheat modules 
-extern void init_modules();
+static void init_modules();
 
 DWORD WINAPI toadll::init()
 {
 #ifdef ENABLE_LOGGING
 	Logger::GetInstance();
 #endif
+
 	LOGDEBUG("[init] Start");
 
 	toad::g_is_ui_internal = false;
 	CInternalUI::ShouldClose = true;
 
+	// ipc with loader
 	if (!UpdateSettings())
 	{
 		clean_up(1, "Failed to open settings");
@@ -89,9 +91,7 @@ DWORD WINAPI toadll::init()
 
 		jvmtiError res = g_jvmti_env->AddCapabilities(&capabilities);
 		if (res != jvmtiError::JVMTI_ERROR_NONE)
-		{
-			LOGERROR("[init] AddCapabilities returned: {}", (int)res);
-		}
+			LOGERROR("[init] AddCapabilities returned an error: {}", (int)res);
 	}
 
 	if (!g_env)
@@ -156,6 +156,8 @@ DWORD WINAPI toadll::init()
 
 		SLEEP(100);
 	}
+
+	LOGDEBUG("Done");
 	clean_up(0);
 	
 	return 0;
@@ -225,7 +227,6 @@ void clean_up(int exitcode, std::string_view msg)
 bool UpdateSettings()
 {
 	using namespace toad;
-
 	using json = nlohmann::json;
 
 	HANDLE hMapFile = OpenFileMapping(FILE_MAP_ALL_ACCESS, 0, L"ToadClientMappingObj");
