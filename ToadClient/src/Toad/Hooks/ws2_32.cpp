@@ -58,6 +58,24 @@ namespace toadll
 		{
 			SLEEP(1);
 		}
+
+		int result = oWSA_Recv(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpOverlapped, lpCompletionRoutine);
+
+		//if (result == 0 && *lpNumberOfBytesRecvd > 0) 
+		//{
+		//	char* packetData = lpBuffers->buf;
+		//	DWORD packetSize = *lpNumberOfBytesRecvd;
+
+		//	std::cout << "Received Packet: ";
+		//	for (DWORD i = 0; i < packetSize; i++) {
+		//		printf("[%d] %d\n", i, (unsigned char)packetData[i]);
+		//	}
+
+		//	//std::string readable(packetData, packetSize);
+		//	//std::cout << "Packet as ASCII: " << readable << std::endl;
+		//}
+
+		return result;
 		return oWSA_Recv(s, lpBuffers, dwBufferCount, lpNumberOfBytesRecvd, lpFlags, lpOverlapped, lpCompletionRoutine);
 	}
 

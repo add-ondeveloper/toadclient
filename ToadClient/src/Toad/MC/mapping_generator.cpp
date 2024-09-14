@@ -512,6 +512,7 @@ std::vector<FoundMappingKlassName> MappingGenerator::FindClassTypes(JNIEnv* env,
 	LOGDEBUG("[MappingGenerator] Found {}/{}", possible_klasses.size(), klass_mappings.size());
 
 	g_jvm->AttachCurrentThread((void**)&env, nullptr);
+
 	// get name method id for getting class names
 	jclass klass = findclass("java/lang/Class", env);
 	if (!klass)

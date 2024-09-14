@@ -112,23 +112,12 @@ DWORD WINAPI toadll::init()
 	LOGDEBUG("[init] Enabling hooks");
 	Hook::EnableAllHooks();
 
-	//if (toad::g_curr_client == toad::MC_CLIENT::NOT_UPDATED)
-	//{
-	//	clean_up(44);
-	//	return 0;
-	//}
-	//if (toad::g_curr_client == toad::MC_CLIENT::NOT_SUPPORTED)
-	//{
-	//	clean_up(45, "Client is not supported");
-	//	return 0;
-	//}
-
 	LOGDEBUG("[init] Client type {}", static_cast<int>(toad::g_curr_client));
-	
-	std::filesystem::path generated_mappings_file = Logger::getDocumentsFolder();
-	generated_mappings_file /= "mapping_gen_out.txt";
-	if (std::filesystem::exists(generated_mappings_file))
-		MappingGenerator::InitMappings(g_env, g_jvmti_env, generated_mappings_file);
+
+	//std::filesystem::path generated_mappings_file = Logger::getDocumentsFolder();
+	//generated_mappings_file /= "mapping_gen_out.txt";
+	//if (std::filesystem::exists(generated_mappings_file))
+	//	MappingGenerator::InitMappings(g_env, g_jvmti_env, generated_mappings_file);
 
 	auto mcclass = Minecraft::getMcClass(g_env);
 	if (mcclass == nullptr)
@@ -145,7 +134,7 @@ DWORD WINAPI toadll::init()
 	}
 
 	LOGDEBUG("[init] Mappings");
-	//mappings::init_map(g_env, mcclass, eclasstemp, toad::g_curr_client);
+	mappings::init_map(g_env, mcclass, eclasstemp, toad::g_curr_client);
 
 	g_env->DeleteLocalRef(eclasstemp);
 	g_env->DeleteLocalRef(mcclass);

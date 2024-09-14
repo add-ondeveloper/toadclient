@@ -48,8 +48,8 @@ namespace toadll::mappings
 			//fields[mappingFields::prevRotationPitchField] = { "prevRotationPitch", "F" };
 
 			fields[mappingFields::motionXField] = { "motionX", "D" };
-			fields[mappingFields::motionYField] = {"motionY", "D"};
-			fields[mappingFields::motionZField] = {"motionZ", "D"};
+			fields[mappingFields::motionYField] = { "motionY", "D" };
+			fields[mappingFields::motionZField] = { "motionZ", "D" };
 
 			fields[mappingFields::EntityPosX] = { "posX", "D" };
 			fields[mappingFields::EntityPosY] = { "posY", "D" };
@@ -242,6 +242,7 @@ namespace toadll::mappings
 			fields[mappingFields::Vec3Z] = { "zCoord", "D" };
 
 			// Vec3I class
+			methods[mapping::Vec3IInit] = { "<init>", "(III)V" };
 			methods[mapping::Vec3IX] = { "getX", "()I" };
 			methods[mapping::Vec3IY] = { "getY", "()I" };
 			methods[mapping::Vec3IZ] = { "getZ", "()I" };
