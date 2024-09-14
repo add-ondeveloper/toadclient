@@ -254,7 +254,9 @@ namespace toad::ui
 					if (checkbox_button("Array List", ICON_FA_BARS, &ui::show_array_list)) is_ArrayList = true;
                     if (checkbox_button("ESP", ICON_FA_EYE, &esp::enabled, &esp::key)) is_Esp = true;
                     ImGui::SameLine(0, 80);
+                    ImGui::BeginDisabled();
 					if (checkbox_button("Chest Stealer", ICON_FA_BOX_OPEN, &chest_stealer::enabled, &chest_stealer::key)) is_ChestStealer = true;
+                    ImGui::EndDisabled();
                     if (checkbox_button("Block ESP", ICON_FA_CUBES, &block_esp::enabled, &block_esp::key)) is_BlockEsp = true;
                     if (checkbox_button("Blink", ICON_FA_GHOST, &blink::enabled, &blink::key)) is_Blink = true;
 
