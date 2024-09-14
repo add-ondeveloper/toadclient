@@ -2,18 +2,18 @@
 
 #ifdef TOAD_LOADER
 #include "VisualizeClicker/visualize_clicker.h"
-#include "utils/imfilebrowser.h"
+#include "utils/file_dialog.h"
 #include "config.h"
 #else
 #include "../../Loader/src/Application/VisualizeClicker/visualize_clicker.h"
 #include "../../Loader/src/Application/VisualizeClicker/visualize_clicker.cpp"
 #include "../../Loader/src/Application/config.h"
-#include "../../Loader/src/utils/imfilebrowser.h"
+#include "../../Loader/src/utils/file_dialog.h"
+#include "../../Loader/src/utils/file_dialog.cpp"
 #endif
 
 namespace toad::ui
 {
-
     // loader ui's
     extern void ui_main(const ImGuiIO* io);
     extern void ui_init(const ImGuiIO* io);
@@ -117,6 +117,9 @@ namespace toad::ui
                         {
                             if (ImGui::SliderFloat("min cps", &left_clicker::min_cps, 5, 20, "%.1fcps", ImGuiSliderFlags_NoInput))
                             {
+                                if (left_clicker::min_cps > left_clicker::max_cps)
+                                    left_clicker::max_cps = left_clicker::min_cps;
+
                                 // update rand delays
                                 left_clicker::rand.UpdateDelays(left_clicker::min_cps, left_clicker::max_cps);
                                 visual_clicker.SetRand(left_clicker::rand);
@@ -124,6 +127,9 @@ namespace toad::ui
 
                         	if (ImGui::SliderFloat("max cps", &left_clicker::max_cps, 5, 20, "%.1fcps", ImGuiSliderFlags_NoInput))
                                 {
+								    if (left_clicker::min_cps > left_clicker::max_cps)
+									    left_clicker::min_cps = left_clicker::max_cps;
+
                                     // update rand delays
 									left_clicker::rand.UpdateDelays(left_clicker::min_cps, left_clicker::max_cps);
                                     visual_clicker.SetRand(left_clicker::rand);
@@ -151,13 +157,13 @@ namespace toad::ui
                                 rand.UpdateDelays(left_clicker::min_cps, left_clicker::max_cps);
                                 visual_clicker.SetRand(rand);
                             }
-                            else if (ImGui::Checkbox("Visualize Randomization", &clicker_rand_visualize))
+                            else if (ImGui::Checkbox("Visualize", &clicker_rand_visualize))
                             {
                                 auto rand = visual_clicker.GetRand();
                                 rand.UpdateDelays(left_clicker::min_cps, left_clicker::max_cps);
                                 visual_clicker.SetRand(rand);
                             }
-
+                            
 							ImGui::Spacing();
 
 	                        ImGui::Text("break blocks");
