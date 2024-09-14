@@ -534,6 +534,7 @@ namespace toad::ui
 
                                     if (ImGui::Selectable(label.c_str(), selected == i))
                                     {
+                                        ZeroMemory(config_name_buf, sizeof(config_name_buf));
                                         memcpy(config_name_buf, file_name.c_str(), file_name.length());
                                         selected = i;
                                     }
