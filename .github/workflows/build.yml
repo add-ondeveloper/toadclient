@@ -20,7 +20,7 @@ jobs:
       run: msbuild ToadClient.sln /p:Configuration=Release /p:Platform="x64"
 
     - name: Upload Artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ToadClient-Build
         path: x64/Release/ # Zkontroluj, jestli se ti to po buildu uloží sem, případně uprav cestu
