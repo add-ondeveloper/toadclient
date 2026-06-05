@@ -18,10 +18,7 @@ jobs:
 
     - name: Build with MSBuild
       shell: cmd
-      run: |
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
-        msbuild ToadClient.sln /p:Configuration=Release /p:Platform="x64" /p:LanguageStandard=stdcpp17 /p:WindowsTargetPlatformVersion=10.0 /p:BuildInParallel=false
-
+      run: msbuild ToadClient.sln /p:Configuration=Release /p:Platform="x64"
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
