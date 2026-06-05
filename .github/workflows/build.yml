@@ -1,0 +1,26 @@
+name: Build ToadClient
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.1
+
+    - name: Build with MSBuild
+      run: msbuild ToadClient.sln /p:Configuration=Release /p:Platform="x64"
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ToadClient-Build
+        path: x64/Release/ # Zkontroluj, jestli se ti to po buildu uloží sem, případně uprav cestu
