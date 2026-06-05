@@ -38,6 +38,7 @@
 #include <format>
 #include <fstream>
 #include <queue>
+#include <chrono>
 
 #include "jni.h"
 #include <jvmti.h>
