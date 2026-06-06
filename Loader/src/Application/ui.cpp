@@ -105,6 +105,7 @@ namespace toad::ui
                                     std::cout << "Init failed" << std:endl;
 
 									if (!failed_shared_mem)
+                                    {
                                         std::cout << "Starting injection" << std:endl;
 										if (!inject(window.pid))
                                             std::cout << "Injection failed" << std:endl;
@@ -120,6 +121,7 @@ namespace toad::ui
                                     set_injected_window(g_injected_window);
 									loading = false;
 								});
+                            }
                         }
                     }
                 }
