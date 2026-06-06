@@ -123,7 +123,6 @@ namespace toad::ui
                                     set_injected_window(g_injected_window);
 									loading = false;
 								});
-                            }
                         }
                     }
                 }
