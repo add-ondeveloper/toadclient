@@ -98,20 +98,20 @@ namespace toad::ui
 							init_thread = std::thread([&]
 								{
 									inject_status = "init #1";
-                                    std::cout << "Starting init" << std:endl;
+                                    std::cout << "Starting init" << std::endl;
 
 									if (!init())
 										failed_shared_mem = true;
-                                    std::cout << "Init failed" << std:endl;
+                                    std::cout << "Init failed" << std::endl;
 
 									if (!failed_shared_mem)
                                     {
-                                        std::cout << "Starting injection" << std:endl;
+                                        std::cout << "Starting injection" << std::endl;
 										if (!inject(window.pid))
-                                            std::cout << "Injection failed" << std:endl;
+                                            std::cout << "Injection failed" << std::endl;
 											failed_inject = true;
                                         } else {
-                                            std::cout << "Injection succesful" << std:endl;
+                                            std::cout << "Injection succesful" << std::endl;
                                         }
 
 									if (!failed_shared_mem && !failed_inject)
