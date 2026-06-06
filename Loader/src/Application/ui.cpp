@@ -114,6 +114,7 @@ namespace toad::ui
                                         } else {
                                             std::cout << "Injection succesful" << std::endl;
                                         }
+                                    }
 
 									if (!failed_shared_mem && !failed_inject)
 										g_is_verified = true;
