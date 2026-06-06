@@ -31,14 +31,14 @@ bool init()
 		hMapFile = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE, 0, ipc_bufsize, L"ToadClientMappingObj");
 		if (hMapFile == NULL)
 		{
-			std::cout << "CreateFileMapping returned null: " << GetLastError() << std::endl;
+			std::cout << "CreateFileMapping returned null: " << GetLastError() << std::endl << std::flush;
 			return false;
 		}
 
 		LPVOID pMem = MapViewOfFile(hMapFile, FILE_MAP_WRITE, 0, 0, 0);
 		if (pMem == NULL)
 		{
-			std::cout << "MapViewOfFile returned null: " << GetLastError() << std::endl;
+			std::cout << "MapViewOfFile returned null: " << GetLastError() << std::endl << std::flush;
 			CloseHandle(hMapFile);
 			return false;
 		}
@@ -281,7 +281,6 @@ bool is_proc_mc(DWORD dwPID)
 	hModuleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, dwPID);
 	if (hModuleSnap == INVALID_HANDLE_VALUE)
 	{
-		std::cout << "hModuleSnap == INVALID_HANDLE_VALUE: " << GetLastError() << std::endl;
 		return false;
 	}
 
@@ -292,7 +291,7 @@ bool is_proc_mc(DWORD dwPID)
 	// and exit if unsuccessful
 	if (!Module32First(hModuleSnap, &me32))
 	{
-		std::cout << "Module32First was unsucessful \n" << std::endl; 
+		std::cout << "Module32First was unsucessful \n"; 
 		CloseHandle(hModuleSnap);
 		return false;
 	}
@@ -306,8 +305,7 @@ bool is_proc_mc(DWORD dwPID)
 
 	// We haven't found jvm.dll or javaw.exe in the process module list 
 	CloseHandle(hModuleSnap);
-	std::cout << "We haven't found jvm.dll or javaw.exe in the process module list: " << GetLastError() << std::endl;
-	return false;
+		return false;
 }
 
 BOOL CALLBACK EnumWindowCallback(HWND hwnd, LPARAM lparam)
