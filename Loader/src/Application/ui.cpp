@@ -108,6 +108,7 @@ namespace toad::ui
                                     {
                                         std::cout << "Starting injection" << std::endl;
 										if (!inject(window.pid))
+                                        {
                                             std::cout << "Injection failed" << std::endl;
 											failed_inject = true;
                                         } else {
