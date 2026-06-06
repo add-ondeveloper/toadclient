@@ -90,7 +90,7 @@ namespace toad::ui
                             // get client type
                             inject_status = "getting client type";
 
-                            g_curr_client = toad::MC_CLIENT::Lunar_189;
+                            g_curr_client = get_client_type(window.title);
                             std::cout << "currclient type: " << (int)g_curr_client << std::endl;
 							if (init_thread.joinable())
 								init_thread.join();
@@ -98,13 +98,21 @@ namespace toad::ui
 							init_thread = std::thread([&]
 								{
 									inject_status = "init #1";
+                                    std::cout << "Starting init" << std:endl;
 
 									if (!init())
 										failed_shared_mem = true;
+                                    std::cout << "Init failed" << std:endl;
 
 									if (!failed_shared_mem)
+                                        std::cout << "Starting injection" << std:endl;
 										if (!inject(window.pid))
+                                            std::cout << "Injection failed" << std:endl;
 											failed_inject = true;
+                                        } else {
+                                            std::cout << "Injection succesful" << std:endl;
+                                        }
+                                    }
 
 									if (!failed_shared_mem && !failed_inject)
 										g_is_verified = true;
