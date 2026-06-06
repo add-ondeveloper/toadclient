@@ -90,7 +90,7 @@ namespace toad::ui
                             // get client type
                             inject_status = "getting client type";
 
-                            g_curr_client = get_client_type(window.title);
+                            g_curr_client = (ClientType)1;
                             std::cout << "currclient type: " << (int)g_curr_client << std::endl;
 							if (init_thread.joinable())
 								init_thread.join();
