@@ -23,6 +23,7 @@ extern bool ManualMapDll(HANDLE hProc, BYTE* pSrcData, SIZE_T FileSize, bool Cle
 extern void __stdcall Shellcode(MANUAL_MAPPING_DATA* pData);
 
 bool ManualMapDll(HANDLE hProc, BYTE* pSrcData, SIZE_T FileSize, bool ClearHeader, bool ClearNonNeededSections, bool AdjustProtections, bool SEHExceptionSupport, DWORD fdwReason, LPVOID lpReserved) {
+	std::cout << "Starting mapping" << std::endl;
 	IMAGE_NT_HEADERS* pOldNtHeader = nullptr;
 	IMAGE_OPTIONAL_HEADER* pOldOptHeader = nullptr;
 	IMAGE_FILE_HEADER* pOldFileHeader = nullptr;
@@ -44,11 +45,14 @@ bool ManualMapDll(HANDLE hProc, BYTE* pSrcData, SIZE_T FileSize, bool ClearHeade
 
 	inject_status = "File ok";
 
+	std::cout << "Alocating memory in target process" << std::endl;
 	pTargetBase = reinterpret_cast<BYTE*>(VirtualAllocEx(hProc, nullptr, pOldOptHeader->SizeOfImage, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE));
 	if (!pTargetBase) {
+		std::cout << "VirtualAllocEx failed:" << GetLastError() << std::endl;
 		inject_status = "Target process memory allocation failed (ex) " + std::to_string(GetLastError());
 		return false;
 	}
+	std::cout << "Memory allocated on address: " << (void*)pTargetBase << std::endl;
 
 	DWORD oldp = 0;
 	VirtualProtectEx(hProc, pTargetBase, pOldOptHeader->SizeOfImage, PAGE_EXECUTE_READWRITE, &oldp);
