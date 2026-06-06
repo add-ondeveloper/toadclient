@@ -292,7 +292,7 @@ bool is_proc_mc(DWORD dwPID)
 	// and exit if unsuccessful
 	if (!Module32First(hModuleSnap, &me32))
 	{
-		std::cout << "Module32First was unsucessful \n"; 
+		std::cout << "Module32First was unsucessful \n" << std::endl; 
 		CloseHandle(hModuleSnap);
 		return false;
 	}
