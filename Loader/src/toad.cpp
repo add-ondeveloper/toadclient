@@ -43,6 +43,7 @@ bool init()
 			return false;
 		}
 
+
 		memset(pMem, L'\0', ipc_bufsize);
 
 		UnmapViewOfFile(pMem);
@@ -280,6 +281,7 @@ bool is_proc_mc(DWORD dwPID)
 	hModuleSnap = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, dwPID);
 	if (hModuleSnap == INVALID_HANDLE_VALUE)
 	{
+		std::cout << "hModuleSnap == INVALID_HANDLE_VALUE: " << GetLastError() << std::endl;
 		return false;
 	}
 
@@ -304,6 +306,7 @@ bool is_proc_mc(DWORD dwPID)
 
 	// We haven't found jvm.dll or javaw.exe in the process module list 
 	CloseHandle(hModuleSnap);
+	std::cout << "We haven't found jvm.dll or javaw.exe in the process module list: " << GetLastError() << std::endl;
 	return false;
 }
 
